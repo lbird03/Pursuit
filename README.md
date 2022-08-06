@@ -1,2 +1,2 @@
-# Reverse on the concept of snake; you are the food
+# Basic keep away game based on snake
 # Python Project
