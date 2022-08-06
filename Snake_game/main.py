@@ -36,7 +36,7 @@ class Player:
     
     # draw player
     def draw(self):
-        self.parent_screen.fill(BACKGRND_COL)
+        # self.parent_screen.fill(BACKGRND_COL)
         self.parent_screen.blit(self.image, (self.x, self.y))
         pygame.display.flip()
 
@@ -54,14 +54,14 @@ class Player:
 
     # teleport player to opposite side depending on which wall is hit
     def hit_limit(self):
-        if self.player.x >= 1000:
-            self.player.x = 0
-        if self.player.x < 0:
-            self.player.x = 1000
-        if self.player.y >= 800:
-            self.player.y = 0
-        if self.player.y < 0:
-            self.player.y = 800
+        if self.x >= 1000:
+            self.x = 0
+        if self.x < 0:
+            self.x = 1000
+        if self.y >= 800:
+            self.y = 0
+        if self.y < 0:
+            self.y = 800
 
     # keep player moving in current direction
     def walk(self):
@@ -77,12 +77,12 @@ class Player:
 
 
 class Snake:
-    def __init__(self, surface, length):
+    def __init__(self, surface, length, x, y):
         self.length = length
         self.parent_screen = surface
         self.block = pygame.image.load("Snake_game/block.png")
-        self.y = [SIZE]*length
-        self.x = [SIZE]*length
+        self.y = [x]*length
+        self.x = [y]*length
         self.direction = "right"
 
     # adds 1 to snake length
@@ -110,60 +110,68 @@ class Snake:
     def move_down(self):
         self.direction = 'down'
 
-    def walk(self):
+    def pursue(self, targ_x, targ_y):
+
+        x_dist = abs(targ_x - self.x[0])
+        y_dist = abs(targ_y - self.y[0])
 
         for i in range(self.length-1, 0, -1):
             self.x[i] = self.x[i-1]
             self.y[i] = self.y[i-1]
         
-        if self.direction == 'left':
-            self.x[0] -= 50
-        if self.direction == 'right':
+        if self.x[0] < targ_x and x_dist >= y_dist:
             self.x[0] += 50
-        if self.direction == 'up':
-            self.y[0] -= 50
-        if self.direction == 'down':
+        if self.x[0] > targ_x and x_dist >= y_dist:
+            self.x[0] -= 50
+        if self.y[0] < targ_y and x_dist < y_dist:
             self.y[0] += 50
+        if self.y[0] > targ_y and x_dist < y_dist:
+            self.y[0] -= 50
         self.draw()
+        
 
 class Game:
     def __init__(self):
         pygame.init()
         self.surface = pygame.display.set_mode((1000, 800))
         self.surface.fill(BACKGRND_COL)
-        # self.snake = Snake(self.surface, 1)
-        # self.snake.draw()
-        self.food = Food(self.surface)
-        self.food.draw()
+        self.snake = Snake(self.surface, 2, 900, 700)
+        self.snake.draw()
+        # self.food = Food(self.surface)
+        # self.food.draw()
         self.player = Player(self.surface)
         self.player.draw()
         self.score = 0
+        
 
     # takes location of food and snake head and returns true upon collision
-    def is_collision(self, x1, y1, x2, y2):
-        if x1 >= x2 and x1 < x2 + SIZE:
-            if y1 >= y2 and y1 < y2 + SIZE:
+    def is_collision(self, x1, y1, x2, y2, x3, y3):
+        # if x1 >= x2 and x1 < x2 + SIZE:
+        #     if y1 >= y2 and y1 < y2 + SIZE:
+        if x1 == x3 or x2 == x3:
+            if y1 == y3 or y2 == y3:
                 return True
         return False
 
     # updates screen (food location, snake location, score)
     def play(self):
-        # self.snake.walk()
+        self.snake.pursue(self.player.x, self.player.y)
         self.player.walk()
-        self.food.draw()
+        # self.food.draw()
         self.display_score()
         pygame.display.flip()
 
-        # snake collision with food
-        # if self.is_collision(self.snake.x[0], self.snake.y[0], self.food.x, self.food.y):
-        #     self.snake.increase_length()
-        #     self.food.move()
+        # snake collision with player
+        if self.is_collision(self.snake.x[0], self.snake.y[0], self.snake.x[1], self.snake.y[1], self.player.x, self.player.y):
+            self.snake.increase_length()
+            raise "Collision Occured"
+            #  self.food.move()
 
-        #snake collision with self
-        # for i in range(2,self.snake.length):
-        #     if self.is_collision(self.snake.x[0], self.snake.y[0], self.snake.x[i], self.snake.y[i]):
-        #         raise "Collision Occured"
-        #     else: pass
+        # snake collision with self
+        for i in range(2,self.snake.length):
+             if self.is_collision(self.snake.x[0], self.snake.y[0], self.snake.x[i], self.snake.y[i]):
+                 raise Exception("Collision Occured")
+             else: pass
 
     # displays current score in top right corner
     def display_score(self):
@@ -183,14 +191,15 @@ class Game:
         pygame.display.flip()
 
     def reset(self):
-        # self.snake = Snake(self.surface, 1)
-        self.food = Food(self.surface)
-        self.player = Food(self.surface)
+        self.snake = Snake(self.surface, 2, 900, 700)
+        # self.food = Food(self.surface)
+        self.player = Player(self.surface)
         self.score = 0
 
     # defines movement, button actions, and movement speed
     # constantly happening loop
     def run(self):
+        
         running = True
         pause = False
         i = 0
@@ -224,9 +233,9 @@ class Game:
                 elif event.type == QUIT:
                     running = False
                 
-                #if player runs into wall
-                if self.player.x >= 1000 or self.player.x < 0 or self.player.y >= 800 or self.player.y < 0:
-                    self.player.hit_limit()
+            #if player runs into wall
+            if self.player.x >= 1000 or self.player.x < 0 or self.player.y >= 800 or self.player.y < 0:
+                self.player.hit_limit()
 
             # update actor positions if not game over
             try:
